@@ -19,6 +19,7 @@ Android app that collects WhatsApp / WhatsApp Business chats from people who are
 1. Install the APK. Open the app → **Turn on the scanner** → find *WA Contact Exporter* in Accessibility and enable it.
    - Android 13+: if the toggle is greyed out ("restricted setting"), go to Settings → Apps → WA Contact Exporter → ⋮ menu → **Allow restricted settings**, then try again.
 2. Tap **Open WhatsApp Business**, stay on the **Chats** tab, tap **Scan chats** on the floating panel. It stops by itself at the bottom of the list. (For archived chats, open *Archived* and scan again.)
+2b. **Group members:** open a group → tap its name to open *Group info* so the member list is on screen → tap **Scan group members**. It scrolls the list and saves members shown as numbers (not in your contacts). Then continue with Get names.
 3. Tap **Get names** (twice). Leave the phone alone until it says *Names done*. Tap **Stop** any time; run it again later to continue with the remaining numbers.
 4. Back in the app, set the fallback name and the Google Contacts label, then **Export CSV** and save it (e.g. Downloads).
 5. On a computer, go to contacts.google.com → **Import** → choose the CSV. All imported contacts get the label you chose, so you can review or undo them easily.

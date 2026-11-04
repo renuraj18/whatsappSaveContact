@@ -53,12 +53,14 @@ class ExporterService : AccessibilityService() {
     private var done = 0
     private var found = 0
     private var namesArmed = false
+    private var groupScan = false
 
     private var overlay: LinearLayout? = null
     private var params: WindowManager.LayoutParams? = null
     private var status: TextView? = null
     private var scanBtn: TextView? = null
     private var nameBtn: TextView? = null
+    private var groupBtn: TextView? = null
 
     override fun onServiceConnected() {
         store = ContactStore(this)
@@ -86,12 +88,14 @@ class ExporterService : AccessibilityService() {
 
     // ---------------------------------------------------------------- scanning the chat list
 
-    private fun startScan() {
+    private fun startScan(group: Boolean = false) {
         store.sourcePackage = waPkg
+        groupScan = group
         mode = Mode.SCANNING
         staleRounds = 0
         lastSnapshot = emptyList()
-        refresh("Scanning… keep WhatsApp on the Chats tab")
+        refresh(if (group) "Scanning group members… keep the member list open" else "Scanning… keep WhatsApp on the Chats tab")
+        if (group) clickViewAll()
         handler.post(::scanStep)
     }
 
@@ -102,9 +106,12 @@ class ExporterService : AccessibilityService() {
             stopAll("Stopped: WhatsApp was not in front"); return
         }
         val list = findChatList(root)
-        if (list == null) { stopAll("Couldn't find the chat list. Open the Chats tab and try again."); return }
+        if (list == null) {
+            stopAll(if (groupScan) "Couldn't find the member list. Open Group info and try again." else "Couldn't find the chat list. Open the Chats tab and try again.")
+            return
+        }
 
-        val rows = readRows(list)
+        val rows = if (groupScan) readGroupRows(list) else readRows(list)
         val added = store.addAll(rows.mapNotNull { r -> r.number?.let { it to r.name } })
         val titles = rows.map { it.title }
         staleRounds = if (titles == lastSnapshot) staleRounds + 1 else 0
@@ -133,6 +140,28 @@ class ExporterService : AccessibilityService() {
             out += Row(title, number, name)
         }
         return out
+    }
+
+    /** Group info rows: an unsaved member shows as a bare number, often with "~ Name" beside it. */
+    private fun readGroupRows(list: AccessibilityNodeInfo): List<Row> {
+        val out = mutableListOf<Row>()
+        for (i in 0 until list.childCount) {
+            val row = list.getChild(i) ?: continue
+            val texts = mutableListOf<String>()
+            collectTexts(row, texts)
+            if (texts.isEmpty()) continue
+            val number = texts.firstNotNullOfOrNull { PhoneUtil.normalize(it) }
+            val name = if (number != null) texts.firstNotNullOfOrNull { PhoneUtil.pushName(it) } else null
+            out += Row(texts.joinToString("|"), number, name)
+        }
+        return out
+    }
+
+    /** Group info collapses long member lists behind a "View all (N more)" row; expand it if present. */
+    private fun clickViewAll() {
+        val root = rootInActiveWindow ?: return
+        val node = root.findAccessibilityNodeInfosByText("View all").firstOrNull() ?: return
+        clickableAncestor(node)?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
     }
 
     private fun findChatList(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
@@ -276,6 +305,7 @@ class ExporterService : AccessibilityService() {
         }
         scanBtn = button { if (mode == Mode.IDLE) startScan() else stopAll("Stopped. ${store.count()} numbers saved.") }
         nameBtn = button { if (mode == Mode.IDLE) startNaming() else stopAll("Stopped. Names found: $found.") }
+        groupBtn = button { if (mode == Mode.IDLE) startScan(group = true) else stopAll("Stopped. ${store.count()} numbers saved.") }
 
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -286,6 +316,7 @@ class ExporterService : AccessibilityService() {
                 .apply { topMargin = (8 * dp).toInt() }
             addView(scanBtn, gap)
             addView(nameBtn, LinearLayout.LayoutParams(gap))
+            addView(groupBtn, LinearLayout.LayoutParams(gap))
         }
 
         val lp = WindowManager.LayoutParams(
@@ -319,18 +350,21 @@ class ExporterService : AccessibilityService() {
 
     private fun hideOverlay() {
         overlay?.let { (getSystemService(WINDOW_SERVICE) as WindowManager).removeView(it) }
-        overlay = null; status = null; scanBtn = null; nameBtn = null
+        overlay = null; status = null; scanBtn = null; nameBtn = null; groupBtn = null
         namesArmed = false
     }
 
     private fun refresh(message: String?) {
         if (message != null) status?.text = message
         if (!::store.isInitialized) return
-        scanBtn?.text = if (mode == Mode.SCANNING) "■ Stop scan" else "Scan chats (${store.count()})"
+        scanBtn?.text = if (mode == Mode.SCANNING && !groupScan) "■ Stop scan" else "Scan chats (${store.count()})"
+        groupBtn?.text = if (mode == Mode.SCANNING && groupScan) "■ Stop scan" else "Scan group members"
         nameBtn?.text = if (mode == Mode.NAMING) "■ Stop" else "Get names (${store.pendingNames()} left)"
-        scanBtn?.alpha = if (mode == Mode.NAMING) 0.4f else 1f
+        scanBtn?.alpha = if (mode == Mode.NAMING || (mode == Mode.SCANNING && groupScan)) 0.4f else 1f
+        groupBtn?.alpha = if (mode == Mode.NAMING || (mode == Mode.SCANNING && !groupScan)) 0.4f else 1f
         nameBtn?.alpha = if (mode == Mode.SCANNING) 0.4f else 1f
-        scanBtn?.isEnabled = mode != Mode.NAMING
+        scanBtn?.isEnabled = mode == Mode.IDLE || (mode == Mode.SCANNING && !groupScan)
+        groupBtn?.isEnabled = mode == Mode.IDLE || (mode == Mode.SCANNING && groupScan)
         nameBtn?.isEnabled = mode != Mode.SCANNING
     }
 }

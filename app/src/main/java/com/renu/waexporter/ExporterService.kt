@@ -76,7 +76,8 @@ class ExporterService : AccessibilityService() {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val activePkg = rootInActiveWindow?.packageName?.toString() ?: return
         if (activePkg in WA_PACKAGES) {
-            waPkg = activePkg
+            // Keep the package chosen at scan time while a scan / naming run is in progress.
+            if (mode == Mode.IDLE) waPkg = activePkg
             showOverlay()
         } else if (activePkg != packageName && mode == Mode.IDLE) {
             hideOverlay()
@@ -86,6 +87,7 @@ class ExporterService : AccessibilityService() {
     // ---------------------------------------------------------------- scanning the chat list
 
     private fun startScan() {
+        store.sourcePackage = waPkg
         mode = Mode.SCANNING
         staleRounds = 0
         lastSnapshot = emptyList()
@@ -161,6 +163,7 @@ class ExporterService : AccessibilityService() {
             return
         }
         namesArmed = false
+        store.sourcePackage?.let { waPkg = it }
         queue.clear(); queue.addAll(pending)
         total = pending.size; done = 0; found = 0
         mode = Mode.NAMING

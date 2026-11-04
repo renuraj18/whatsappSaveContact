@@ -42,9 +42,14 @@ class ContactStore(context: Context) {
         save(map)
     }
 
+    /** The WhatsApp package the numbers were scanned from; "Get names" opens chats in the same app. */
+    var sourcePackage: String?
+        get() = prefs.getString(PKG_KEY, null)
+        set(v) = prefs.edit().putString(PKG_KEY, v).apply()
+
     fun count() = all().size
     fun pendingNames() = all().count { it.value.isBlank() }
-    fun clear() = prefs.edit().remove(KEY).apply()
+    fun clear() = prefs.edit().remove(KEY).remove(PKG_KEY).apply()
 
-    companion object { private const val KEY = "entries" }
+    companion object { private const val KEY = "entries"; private const val PKG_KEY = "source_pkg" }
 }

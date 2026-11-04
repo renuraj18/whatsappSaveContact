@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WA Contact Exporter</string>
+    <string name="service_label">WA Contact Exporter – chat scanner</string>
+    <string name="service_description">Reads the WhatsApp chat list on screen and scrolls it, to collect chats that show a phone number instead of a saved name. Only works while you press Scan inside WhatsApp. Nothing leaves your phone; the list is stored locally until you export it as a CSV.</string>
+</resources>

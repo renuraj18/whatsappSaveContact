@@ -1,13 +1,23 @@
 package com.renu.waexporter
 
-/** Builds a CSV in the column format Google Contacts (contacts.google.com → Import) accepts. */
+/**
+ * Builds a CSV in the Google Contacts import format (see DATA/google_contacts_import.csv):
+ * Name, Given Name, Family Name, Phone 1 - Label, Phone 1 - Value. A Labels column is appended
+ * only when a label is given, so imported contacts can be grouped (leave it empty for the exact sample format).
+ */
 object CsvExport {
+    private const val BOM = "\uFEFF"
+
     fun build(entries: Map<String, String>, fallbackPrefix: String, label: String): String {
-        val labels = if (label.isBlank()) "* myContacts" else "${label.trim()} ::: * myContacts"
-        val sb = StringBuilder("First Name,Last Name,Labels,Phone 1 - Label,Phone 1 - Value\n")
+        val withLabel = label.isNotBlank()
+        val sb = StringBuilder(BOM)
+        sb.append("Name,Given Name,Family Name,Phone 1 - Label,Phone 1 - Value")
+        sb.append(if (withLabel) ",Labels\n" else "\n")
         for ((number, name) in entries) {
-            val first = name.ifBlank { "${fallbackPrefix.trim()} $number".trim() }
-            sb.append(listOf(first, "", labels, "Mobile", number).joinToString(",") { esc(it) }).append('\n')
+            val full = name.ifBlank { "${fallbackPrefix.trim()} $number".trim() }
+            val cols = mutableListOf(full, full, "", "Mobile", number)
+            if (withLabel) cols += label.trim()
+            sb.append(cols.joinToString(",") { esc(it) }).append('\n')
         }
         return sb.toString()
     }

@@ -58,7 +58,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Google Contacts label (group)" />
+            android:text="Google Contacts label (group) — leave empty for no Labels column" />
 
         <EditText
             android:id="@+id/label"
@@ -71,7 +71,7 @@
             android:id="@+id/exportBtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="3. Export CSV" />
+            android:text="3. Export Google Contacts CSV" />
 
         <Button
             android:id="@+id/clearBtn"
